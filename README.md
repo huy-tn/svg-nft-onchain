@@ -1,0 +1,2 @@
+# SVG NFT Onchain
+This project demonstrate how to create an NFT which store URI onchain (not IPFS). The NFT use ERC-721 standard with URI Storage delivered by OpenZeppelin extensions. Each NFT are minted randomly by receiving a random seed from Chainlink VRF
