@@ -2,12 +2,21 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-// import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "base64-sol/base64.sol";
 
 contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
+    event requestedRandomSVG(
+        bytes32 indexed requestId,
+        uint256 indexed tokenId
+    );
+    event createdUnfinishedRandomSVG(
+        uint256 indexed tokenId,
+        uint256 randomNumber
+    );
+    event createdRandomSVG(uint256 indexed tokenId, string tokenURI);
+
     bytes32 public keyHash;
     uint256 public fee;
     uint256 public tokenCounter;
@@ -21,16 +30,6 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
     mapping(bytes32 => address) public requestIdToSender;
     mapping(bytes32 => uint256) public requestIdToTokenId;
     mapping(uint256 => uint256) public tokenIdToRandomNumber;
-
-    event requestedRandomSVG(
-        bytes32 indexed requestId,
-        uint256 indexed tokenId
-    );
-    event createdUnfinishedRandomSVG(
-        uint256 indexed tokenId,
-        uint256 randomNumber
-    );
-    event createdRandomSVG(uint256 indexed tokenId, string tokenURI);
 
     constructor(
         address _VRFCoordinator,
@@ -46,9 +45,9 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
         tokenCounter = 0;
         maxNumberOfPaths = 10;
         maxNumberOfPathCommands = 5;
-        size = 50;
+        size = 500;
         pathCommands = ["M", "L"];
-        colors = ["red", "blue", "green", "yellow", "black"];
+        colors = ["red", "blue", "green", "yellow", "black", "white"];
     }
 
     function create() public returns (bytes32 requestId) {
@@ -59,18 +58,6 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
         tokenCounter += 1;
 
         emit requestedRandomSVG(requestId, tokenId);
-    }
-
-    function fulfillRandomness(bytes32 _requestId, uint256 _randomNumber)
-        internal
-        override
-    {
-        address nftOwner = requestIdToSender[_requestId];
-        uint256 tokenId = requestIdToTokenId[_requestId];
-
-        _safeMint(nftOwner, tokenId);
-        tokenIdToRandomNumber[tokenId] = _randomNumber;
-        emit createdUnfinishedRandomSVG(tokenId, _randomNumber);
     }
 
     function finishMint(uint256 _tokenId) public {
@@ -90,6 +77,18 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
         string memory tokenURI = formatTokenURI(imageURI);
         _setTokenURI(_tokenId, tokenURI);
         emit createdRandomSVG(_tokenId, tokenURI);
+    }
+
+    function fulfillRandomness(bytes32 _requestId, uint256 _randomNumber)
+        internal
+        override
+    {
+        address nftOwner = requestIdToSender[_requestId];
+        uint256 tokenId = requestIdToTokenId[_requestId];
+
+        _safeMint(nftOwner, tokenId);
+        tokenIdToRandomNumber[tokenId] = _randomNumber;
+        emit createdUnfinishedRandomSVG(tokenId, _randomNumber);
     }
 
     function generateSVG(uint256 _randomNumber)
