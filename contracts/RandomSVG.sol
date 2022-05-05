@@ -7,7 +7,6 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "base64-sol/base64.sol";
 
-
 contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
     bytes32 public keyHash;
     uint256 public fee;
@@ -31,7 +30,7 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
         uint256 indexed tokenId,
         uint256 randomNumber
     );
-    event CreatedRandomSVG(uint256 indexed tokenId, string tokenURI);
+    event createdRandomSVG(uint256 indexed tokenId, string tokenURI);
 
     constructor(
         address _VRFCoordinator,
@@ -55,7 +54,7 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
     function create() public returns (bytes32 requestId) {
         requestId = requestRandomness(keyHash, fee);
         requestIdToSender[requestId] = msg.sender;
-        uint256 tokenId = tokenCounter + 1;
+        uint256 tokenId = tokenCounter;
         requestIdToTokenId[requestId] = tokenId;
         tokenCounter += 1;
 
@@ -90,7 +89,7 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
         string memory imageURI = svgToImageURI(svg);
         string memory tokenURI = formatTokenURI(imageURI);
         _setTokenURI(_tokenId, tokenURI);
-        emit CreatedRandomSVG(_tokenId, tokenURI);
+        emit createdRandomSVG(_tokenId, tokenURI);
     }
 
     function generateSVG(uint256 _randomNumber)
@@ -99,13 +98,22 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
         returns (string memory finalSvg)
     {
         uint256 numberOfPaths = (_randomNumber % maxNumberOfPaths) + 1;
+        // finalSvg = string(
+        //     abi.encodePacked(
+        //         '<svg xmlns="http://www.w3.org/2000/svg" height=',
+        //         Strings.toString(size),
+        //         ' "width =',
+        //         Strings.toString(size),
+        //         '"/>'
+        //     )
+        // );
         finalSvg = string(
             abi.encodePacked(
-                '<svg xmlns="http://www.w3.org/2000/svg" height=',
+                "<svg xmlns='http://www.w3.org/2000/svg' height='",
                 Strings.toString(size),
-                ' "width =',
+                "' width='",
                 Strings.toString(size),
-                '">'
+                "'>"
             )
         );
 
@@ -137,20 +145,35 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
                 pathSvg,
                 '" fill="transparent" stroke="',
                 color,
-                '">'
+                '"/>'
             )
         );
     }
 
-    function generatePathCommand(uint256 _randomness) public view returns(string memory pathCommand) {
+    function generatePathCommand(uint256 _randomness)
+        public
+        view
+        returns (string memory pathCommand)
+    {
         pathCommand = pathCommands[_randomness % pathCommands.length];
-        uint256 parameterOne = uint256(keccak256(abi.encode(_randomness, size * 2))) % size;
-        uint256 parameterTwo = uint256(keccak256(abi.encode(_randomness, size * 2 + 1))) % size;
-        pathCommand = string(abi.encodePacked(pathCommand, " ", Strings.toString(parameterOne), " ", Strings.toString(parameterTwo)));
-
+        uint256 parameterOne = uint256(
+            keccak256(abi.encode(_randomness, size * 2))
+        ) % size;
+        uint256 parameterTwo = uint256(
+            keccak256(abi.encode(_randomness, size * 2 + 1))
+        ) % size;
+        pathCommand = string(
+            abi.encodePacked(
+                pathCommand,
+                " ",
+                Strings.toString(parameterOne),
+                " ",
+                Strings.toString(parameterTwo)
+            )
+        );
     }
 
-       function svgToImageURI(string memory svg)
+    function svgToImageURI(string memory svg)
         public
         pure
         returns (string memory)
@@ -171,16 +194,20 @@ contract RandomSVG is ERC721URIStorage, VRFConsumerBase {
         returns (string memory)
     {
         string memory baseURL = "data:application/json;base64,";
-        return string(abi.encodePacked(
-            baseURL,
-            Base64.encode(bytes(abi.encodePacked(
-                        '{"name":"SVGNFT", "description":"An NFT based on SVG!", "attributes":"","image":"',
-                        imageURI,
-                        '"}'
+        return
+            string(
+                abi.encodePacked(
+                    baseURL,
+                    Base64.encode(
+                        bytes(
+                            abi.encodePacked(
+                                '{"name":"SVGNFT", "description":"An NFT based on SVG!", "attributes":"","image":"',
+                                imageURI,
+                                '"}'
+                            )
+                        )
                     )
                 )
-            )
-        ));
+            );
     }
-
 }
